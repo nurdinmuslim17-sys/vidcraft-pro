@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>VidCraft Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+<style>
+:root{--bg:#020617;--card:#0f172a;--accent:#22c55e;--text:#e5e7eb;--muted:#94a3b8}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(160deg,#020617,#020617 60%,#020617);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.app{width:100%;max-width:420px;background:rgba(15,23,42,.85);backdrop-filter:blur(12px);border-radius:20px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+h1{font-size:22px;margin:0}
+p{font-size:13px;color:var(--muted);margin:4px 0 16px}
+label{font-size:12px;color:var(--muted);display:block;margin-top:12px}
+input,textarea{width:100%;margin-top:6px;padding:12px;background:#020617;border:1px solid #1e293b;border-radius:12px;color:var(--text)}
+button{width:100%;margin-top:18px;padding:14px;background:linear-gradient(135deg,#22c55e,#16a34a);border:none;border-radius:14px;font-weight:700;font-size:15px;color:#022c22;cursor:pointer}
+.footer{text-align:center;font-size:11px;color:var(--muted);margin-top:14px}
+.badge{display:inline-block;background:#020617;border:1px solid #1e293b;padding:4px 10px;border-radius:999px;font-size:11px;color:var(--accent);margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="badge">PRO MODE</div>
+  <h1 style="background:linear-gradient(135deg,#22c55e,#16a34a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">VidCraft Pro</h1>
+  <p>Turn downloaded videos into original content</p>
+
+  <label>Upload Video (batch)</label>
+  <input type="file" id="videoInput" accept="video/*" multiple>
+
+  <label>Nama Produk</label>
+  <input type="text" id="product" placeholder="Contoh: Blender Mini">
+
+  <button onclick="generate()">GENERATE VIDEO</button>
+
+  <div id="progressBox" style="display:none;margin-top:16px">
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:6px">Processing <span id="progressText">0%</span></div>
+    <div style="width:100%;height:10px;background:#020617;border-radius:999px;overflow:hidden">
+      <div id="progressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#16a34a)"></div>
+    </div>
+  </div>
+
+  <div class="footer">© 2026 VidCraft Pro • Affiliate Video Tool</div>
+</div>
+
+<script>
+const { createFFmpeg, fetchFile } = FFmpeg;
+const ffmpeg = createFFmpeg({ log: true });
+
+const hooks=["GAK NYANGKA HASILNYA BISA GINI!","JUJUR BARU TAU PRODUK INI","AWALNYA RAGU, TERNYATA KEPAKE TERUS","TERNYATA SELAMA INI SALAH PILIH"];
+const isi=["Awalnya saya kira biasa aja, tapi setelah dipakai rutin hasilnya kerasa.","Dipakai beberapa hari dan ternyata bikin aktivitas lebih gampang.","Saya coba tanpa ekspektasi, tapi malah kepake terus.","Yang paling kerasa itu dari segi kepraktisannya."];
+const cta=["Link produknya ada di keranjang ya.","Kalau kamu lagi butuh, cek di keranjang.","Aku taruh linknya di keranjang.","Bisa kamu cek langsung di keranjang."];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const randomStory=p=>`${pick(hooks)}\n\n${pick(isi)} ${p} ini cocok buat harian.\n\n${pick(cta)}`;
+
+function generateSRT(text){const lines=text.split("\n").filter(l=>l.trim()!=="");let srt="",t=0;lines.forEach((l,i)=>{let d=i==0?2:2.5;let s=new Date(t*1000).toISOString().substr(11,12);t+=d;let e=new Date(t*1000).toISOString().substr(11,12);srt+=`${i+1}\n${s.replace('.',',')} --> ${e.replace('.',',')}\n${l}\n\n`;});return srt}
+
+function setProgress(p){document.getElementById('progressBox').style.display='block';document.getElementById('progressBar').style.width=p+'%';document.getElementById('progressText').innerText=p+'%'}
+
+async function generate(){
+  const files=document.getElementById('videoInput').files;
+  const product=document.getElementById('product').value;
+  if(!files.length||!product) return alert('Video & nama produk wajib diisi');
+  if(!ffmpeg.isLoaded()) await ffmpeg.load();
+  ffmpeg.FS('writeFile','musik.mp3',await fetchFile('musik.mp3'));
+  setProgress(5);
+  for(let i=0;i<files.length;i++){
+    const story=randomStory(product);
+    const srt=generateSRT(story);
+    ffmpeg.FS('writeFile','input.mp4',await fetchFile(files[i]));
+    ffmpeg.FS('writeFile','subs.srt',new TextEncoder().encode(srt));
+    setProgress(Math.floor((i/files.length)*80)+10);
+    await ffmpeg.run('-i','input.mp4','-i','musik.mp3','-filter_complex','[1:a]volume=0.25[a1]','-map','0:v','-map','a1','-vf','scale=1080:1920,zoompan=z=1.05,subtitles=subs.srt:force_style=FontSize=52,Outline=3,Alignment=2,Bold=1','-shortest',`out${i}.mp4`);
+    const data=ffmpeg.FS('readFile',`out${i}.mp4`);
+    const url=URL.createObjectURL(new Blob([data.buffer],{type:'video/mp4'}));
+    const a=document.createElement('a');a.href=url;a.download=`video-original-${i+1}.mp4`;a.click();
+  }
+  setProgress(100);
+}
+</script>
+</body>
+</html>
