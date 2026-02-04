@@ -114,7 +114,7 @@ console.error(e);
 // Dropdown sinkronisasi input
 hookSelect.onchange=()=>{ if(hookSelect.value) hookInput.value=hookSelect.value; };
 
-// overlay 3 detik
+// overlay 3 detik preview
 video.ontimeupdate=()=>{
 if(video.currentTime<=3 && hookInput.value.trim()){
 hook.style.display="block";
@@ -122,17 +122,24 @@ hook.textContent=hookInput.value;
 }else hook.style.display="none";
 };
 
-// Export universal + status bar
+// Export universal + canvas overlay
 exportBtn.onclick=async()=>{
-if(!video.src){alert("Video belum ada");return;}
+if(!video.src){alert("Video belum ada"); return;}
 exStatus.textContent="Memproses export...";
 exportBtn.disabled=true;
 progressBar.style.width="0%";
+
 try{
 const isDesktop=('captureStream' in video);
 if(isDesktop){
   await video.play();
-  const stream=video.captureStream();
+
+  const canvas=document.createElement("canvas");
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+  const ctx=canvas.getContext("2d");
+
+  const stream=canvas.captureStream();
   const recorder=new MediaRecorder(stream,{mimeType:"video/webm"});
   let chunks=[];
   recorder.ondataavailable=e=>chunks.push(e.data);
@@ -148,11 +155,21 @@ if(isDesktop){
   };
   recorder.start();
 
-  // Update progress bar
+  // Render loop canvas + overlay
   const interval=setInterval(()=>{
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    if(video.currentTime<=3 && hookInput.value.trim()){
+      ctx.fillStyle="rgba(0,0,0,0.6)";
+      ctx.fillRect(canvas.width/2 - 150, 50, 300, 50);
+      ctx.fillStyle="white";
+      ctx.font="24px sans-serif";
+      ctx.textAlign="center";
+      ctx.fillText(hookInput.value,canvas.width/2,85);
+    }
+    // update progress
     const perc=Math.min((video.currentTime/video.duration)*100,100);
     progressBar.style.width=perc+"%";
-  },200);
+  },100);
 
   setTimeout(()=>{
     recorder.stop();
@@ -160,8 +177,8 @@ if(isDesktop){
     clearInterval(interval);
   }, video.duration*1000);
 
-}else{
-  // Mobile/Safari fallback
+} else {
+  // fallback mobile/Safari
   exStatus.textContent="Upload untuk convert MP4...";
   const form=new FormData();
   form.append("video",sourceBlob,"video.webm");
@@ -175,6 +192,7 @@ if(isDesktop){
   exportBtn.disabled=false;
   progressBar.style.width="100%";
 }
+
 }catch(e){
   exStatus.textContent="Export gagal";
   exportBtn.disabled=false;
