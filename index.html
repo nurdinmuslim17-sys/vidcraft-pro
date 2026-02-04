@@ -9,8 +9,8 @@ body{margin:0;background:#0b0f17;color:#eaeaf0;font-family:system-ui;display:fle
 .app{max-width:420px;width:100%}
 .card{background:#141a26;padding:18px;border-radius:16px;margin-bottom:16px}
 h1{margin:0 0 8px}
-input,button{width:100%;padding:14px;border-radius:12px;border:none;margin-top:10px;font-size:14px}
-input{background:#0b1020;color:white}
+input,button,select{width:100%;padding:14px;border-radius:12px;border:none;margin-top:10px;font-size:14px}
+input,select{background:#0b1020;color:white}
 button{background:#6d5cff;color:white;font-weight:700;cursor:pointer}
 button:disabled{opacity:.6}
 .status{font-size:13px;color:#9aa3b2;margin-top:8px}
@@ -19,13 +19,16 @@ video{width:100%;border-radius:12px}
 .hook{position:absolute;top:8%;left:50%;transform:translateX(-50%);
 background:rgba(0,0,0,.6);padding:10px 14px;border-radius:10px;font-weight:800;text-align:center;
 max-width:90%;display:none;font-size:18px}
+.progress{width:100%;height:10px;background:#1c2233;border-radius:5px;margin:10px 0}
+.progress-bar{width:0%;height:100%;background:#6d5cff;border-radius:5px;transition:width 0.2s}
 </style>
 </head>
 <body>
 <div class="app">
 <h1>🎬 VidCraft Pro Universal</h1>
-<p class="status">Download → Hook → Re-export Original</p>
+<p class="status">Download → Pilih Hook → Export Original</p>
 
+<!-- TikTok Downloader -->
 <div class="card">
 <b>⬇️ TikTok Downloader</b>
 <input id="url" placeholder="Tempel link TikTok">
@@ -33,16 +36,39 @@ max-width:90%;display:none;font-size:18px}
 <div id="dlStatus" class="status"></div>
 </div>
 
+<!-- Hook Template -->
 <div class="card">
-<b>🪝 Hook 3 Detik</b>
-<input id="hookText" placeholder="Contoh: Motor ini bikin kaget!">
+<b>🪝 Pilih Hook 3 Detik</b>
+<select id="hookSelect">
+<option value="">-- Pilih Hook --</option>
+<option value="Motor ini bikin kaget!">Motor ini bikin kaget!</option>
+<option value="Gak nyangka endingnya!">Gak nyangka endingnya!</option>
+<option value="Lihat trik rahasianya!">Lihat trik rahasianya!</option>
+<option value="Kamu harus coba ini!">Kamu harus coba ini!</option>
+<option value="Ini baru level pro!">Ini baru level pro!</option>
+<option value="Rahasia ini bakal bikin kamu tercengang!">Rahasia ini bakal bikin kamu tercengang!</option>
+<option value="Cuma 1 menit, tapi hasilnya WOW!">Cuma 1 menit, tapi hasilnya WOW!</option>
+<option value="Trik ini jarang diketahui orang!">Trik ini jarang diketahui orang!</option>
+<option value="Siapa sangka bisa semudah ini!">Siapa sangka bisa semudah ini!</option>
+<option value="Kamu pasti nggak percaya endingnya!">Kamu pasti nggak percaya endingnya!</option>
+<option value="Video ini bakal viral!">Video ini bakal viral!</option>
+<option value="Lihat perubahan dramatisnya!">Lihat perubahan dramatisnya!</option>
+<option value="Tips cepat yang wajib dicoba!">Tips cepat yang wajib dicoba!</option>
+<option value="Ini cara orang pro melakukannya!">Ini cara orang pro melakukannya!</option>
+<option value="Siap-siap terkejut dengan ini!">Siap-siap terkejut dengan ini!</option>
+</select>
+<input id="hookText" placeholder="Atau tulis sendiri">
 </div>
 
+<!-- Preview + Export -->
 <div class="card">
 <b>🎞️ Preview</b>
 <div class="video-wrap">
 <video id="video" controls></video>
 <div id="hook" class="hook"></div>
+</div>
+<div class="progress">
+<div class="progress-bar" id="progressBar"></div>
 </div>
 <button id="export" disabled>Export Video</button>
 <div id="exStatus" class="status">Idle</div>
@@ -51,13 +77,16 @@ max-width:90%;display:none;font-size:18px}
 
 <script>
 const urlInput=document.getElementById("url");
-const hookInput=document.getElementById("hookText");
 const downloadBtn=document.getElementById("download");
+const hookSelect=document.getElementById("hookSelect");
+const hookInput=document.getElementById("hookText");
 const exportBtn=document.getElementById("export");
 const video=document.getElementById("video");
 const hook=document.getElementById("hook");
 const dlStatus=document.getElementById("dlStatus");
 const exStatus=document.getElementById("exStatus");
+const progressBar=document.getElementById("progressBar");
+
 let sourceBlob;
 
 // Downloader TikTok
@@ -82,7 +111,10 @@ console.error(e);
 }
 };
 
-// Hook overlay 3 detik
+// Dropdown sinkronisasi input
+hookSelect.onchange=()=>{ if(hookSelect.value) hookInput.value=hookSelect.value; };
+
+// overlay 3 detik
 video.ontimeupdate=()=>{
 if(video.currentTime<=3 && hookInput.value.trim()){
 hook.style.display="block";
@@ -90,12 +122,12 @@ hook.textContent=hookInput.value;
 }else hook.style.display="none";
 };
 
-// Export universal
+// Export universal + status bar
 exportBtn.onclick=async()=>{
 if(!video.src){alert("Video belum ada");return;}
 exStatus.textContent="Memproses export...";
 exportBtn.disabled=true;
-
+progressBar.style.width="0%";
 try{
 const isDesktop=('captureStream' in video);
 if(isDesktop){
@@ -112,10 +144,24 @@ if(isDesktop){
     a.click();
     exStatus.textContent="Export selesai";
     exportBtn.disabled=false;
+    progressBar.style.width="0%";
   };
   recorder.start();
-  setTimeout(()=>{recorder.stop();video.pause();},video.duration*1000);
+
+  // Update progress bar
+  const interval=setInterval(()=>{
+    const perc=Math.min((video.currentTime/video.duration)*100,100);
+    progressBar.style.width=perc+"%";
+  },200);
+
+  setTimeout(()=>{
+    recorder.stop();
+    video.pause();
+    clearInterval(interval);
+  }, video.duration*1000);
+
 }else{
+  // Mobile/Safari fallback
   exStatus.textContent="Upload untuk convert MP4...";
   const form=new FormData();
   form.append("video",sourceBlob,"video.webm");
@@ -127,10 +173,12 @@ if(isDesktop){
   a.click();
   exStatus.textContent="Export selesai (MP4 fallback)";
   exportBtn.disabled=false;
+  progressBar.style.width="100%";
 }
 }catch(e){
   exStatus.textContent="Export gagal";
   exportBtn.disabled=false;
+  progressBar.style.width="0%";
   console.error(e);
 }
 };
