@@ -3,191 +3,136 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VidCraft Pro</title>
-
+<title>VidCraft Pro Universal</title>
 <style>
-body{
-  margin:0;
-  background:#0b0f17;
-  color:#eaeaf0;
-  font-family:system-ui;
-  display:flex;
-  justify-content:center;
-  padding:20px
-}
+body{margin:0;background:#0b0f17;color:#eaeaf0;font-family:system-ui;display:flex;justify-content:center;padding:20px}
 .app{max-width:420px;width:100%}
-.card{
-  background:#141a26;
-  padding:18px;
-  border-radius:16px;
-  margin-bottom:16px
-}
+.card{background:#141a26;padding:18px;border-radius:16px;margin-bottom:16px}
 h1{margin:0 0 8px}
-input,button{
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:none;
-  margin-top:10px;
-  font-size:14px
-}
+input,button{width:100%;padding:14px;border-radius:12px;border:none;margin-top:10px;font-size:14px}
 input{background:#0b1020;color:white}
-button{
-  background:#6d5cff;
-  color:white;
-  font-weight:700;
-  cursor:pointer
-}
+button{background:#6d5cff;color:white;font-weight:700;cursor:pointer}
 button:disabled{opacity:.6}
 .status{font-size:13px;color:#9aa3b2;margin-top:8px}
-
-.video-wrap{
-  position:relative;
-  margin-top:12px
-}
-video{
-  width:100%;
-  border-radius:12px
-}
-.hook{
-  position:absolute;
-  top:8%;
-  left:50%;
-  transform:translateX(-50%);
-  background:rgba(0,0,0,.6);
-  padding:10px 14px;
-  border-radius:10px;
-  font-weight:800;
-  text-align:center;
-  max-width:90%;
-  display:none;
-  font-size:18px
-}
+.video-wrap{position:relative;margin-top:12px}
+video{width:100%;border-radius:12px}
+.hook{position:absolute;top:8%;left:50%;transform:translateX(-50%);
+background:rgba(0,0,0,.6);padding:10px 14px;border-radius:10px;font-weight:800;text-align:center;
+max-width:90%;display:none;font-size:18px}
 </style>
 </head>
-
 <body>
 <div class="app">
-<h1>🎬 VidCraft Pro</h1>
+<h1>🎬 VidCraft Pro Universal</h1>
 <p class="status">Download → Hook → Re-export Original</p>
 
-<!-- TikTok Downloader -->
 <div class="card">
-  <b>⬇️ TikTok Downloader</b>
-  <input id="url" placeholder="Tempel link TikTok">
-  <button id="download">Download</button>
-  <div id="dlStatus" class="status"></div>
+<b>⬇️ TikTok Downloader</b>
+<input id="url" placeholder="Tempel link TikTok">
+<button id="download">Download</button>
+<div id="dlStatus" class="status"></div>
 </div>
 
-<!-- Hook -->
 <div class="card">
-  <b>🪝 Hook 3 Detik</b>
-  <input id="hookText" placeholder="Contoh: Motor ini bikin kaget!">
+<b>🪝 Hook 3 Detik</b>
+<input id="hookText" placeholder="Contoh: Motor ini bikin kaget!">
 </div>
 
-<!-- Preview + Export -->
 <div class="card">
-  <b>🎞️ Preview</b>
-  <div class="video-wrap">
-    <video id="video" controls></video>
-    <div id="hook" class="hook"></div>
-  </div>
-  <button id="export" disabled>Export Video (Original)</button>
-  <div id="exStatus" class="status">Idle</div>
+<b>🎞️ Preview</b>
+<div class="video-wrap">
+<video id="video" controls></video>
+<div id="hook" class="hook"></div>
+</div>
+<button id="export" disabled>Export Video</button>
+<div id="exStatus" class="status">Idle</div>
 </div>
 </div>
 
 <script>
-const urlInput = document.getElementById("url");
-const hookInput = document.getElementById("hookText");
-const downloadBtn = document.getElementById("download");
-const exportBtn = document.getElementById("export");
-const video = document.getElementById("video");
-const hook = document.getElementById("hook");
-const dlStatus = document.getElementById("dlStatus");
-const exStatus = document.getElementById("exStatus");
-
+const urlInput=document.getElementById("url");
+const hookInput=document.getElementById("hookText");
+const downloadBtn=document.getElementById("download");
+const exportBtn=document.getElementById("export");
+const video=document.getElementById("video");
+const hook=document.getElementById("hook");
+const dlStatus=document.getElementById("dlStatus");
+const exStatus=document.getElementById("exStatus");
 let sourceBlob;
 
 // Downloader TikTok
-downloadBtn.onclick = async () => {
-  const url = urlInput.value.trim();
-  if(!url) return;
-  dlStatus.textContent = "Mengambil video...";
-  dlStatus.className = "status";
-
-  try{
-    const res = await fetch(`/api/tiktok?url=${encodeURIComponent(url)}`);
-    const data = await res.json();
-
-    if(!data.data || !data.data.play){
-      throw new Error("Video tidak ditemukan");
-    }
-
-    const vRes = await fetch(data.data.play);
-    sourceBlob = await vRes.blob();
-
-    video.src = URL.createObjectURL(sourceBlob);
-    video.onloadedmetadata = () => {
-      exportBtn.disabled = false;
-    }
-
-    dlStatus.textContent = "Video siap";
-  }catch(e){
-    dlStatus.textContent = "Gagal download";
-    dlStatus.className = "status error";
-  }
+downloadBtn.onclick=async()=>{
+const url=urlInput.value.trim();
+if(!url) return;
+dlStatus.textContent="Mengambil video...";
+dlStatus.className="status";
+try{
+const res=await fetch(`/api/tiktok?url=${encodeURIComponent(url)}`);
+const data=await res.json();
+if(!data.data||!data.data.play) throw new Error("Video tidak ditemukan");
+const vRes=await fetch(data.data.play);
+sourceBlob=await vRes.blob();
+video.src=URL.createObjectURL(sourceBlob);
+video.onloadedmetadata=()=>{exportBtn.disabled=false;}
+dlStatus.textContent="Video siap";
+}catch(e){
+dlStatus.textContent="Gagal download";
+dlStatus.className="status error";
+console.error(e);
+}
 };
 
-// Hook overlay
-video.ontimeupdate = () => {
-  if(video.currentTime <= 3 && hookInput.value.trim()){
-    hook.style.display = "block";
-    hook.textContent = hookInput.value;
-  }else{
-    hook.style.display = "none";
-  }
+// Hook overlay 3 detik
+video.ontimeupdate=()=>{
+if(video.currentTime<=3 && hookInput.value.trim()){
+hook.style.display="block";
+hook.textContent=hookInput.value;
+}else hook.style.display="none";
 };
 
-// Export video
-exportBtn.onclick = async () => {
-  if(!video.src){
-    alert("Video belum ada");
-    return;
-  }
+// Export universal
+exportBtn.onclick=async()=>{
+if(!video.src){alert("Video belum ada");return;}
+exStatus.textContent="Memproses export...";
+exportBtn.disabled=true;
 
-  exStatus.textContent = "Re-export + subtitle...";
-  exportBtn.disabled = true;
-
-  try{
-    video.currentTime = 0;
-    await video.play(); // pastikan play dulu
-    const stream = document.querySelector(".video-wrap").captureStream();
-    const recorder = new MediaRecorder(stream, {mimeType:"video/webm"});
-    let chunks=[];
-
-    recorder.ondataavailable = e => chunks.push(e.data);
-    recorder.onstop = () => {
-      const blob = new Blob(chunks,{type:"video/webm"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `vidcraft_${Date.now()}.webm`;
-      a.click();
-      exStatus.textContent="Export selesai";
-      exportBtn.disabled=false;
-    };
-
-    recorder.start();
-    setTimeout(()=>{
-      recorder.stop();
-      video.pause();
-    }, video.duration*1000);
-
-  }catch(e){
-    exStatus.textContent = "Export gagal";
+try{
+const isDesktop=('captureStream' in video);
+if(isDesktop){
+  await video.play();
+  const stream=video.captureStream();
+  const recorder=new MediaRecorder(stream,{mimeType:"video/webm"});
+  let chunks=[];
+  recorder.ondataavailable=e=>chunks.push(e.data);
+  recorder.onstop=()=>{
+    const blob=new Blob(chunks,{type:"video/webm"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=`vidcraft_${Date.now()}.webm`;
+    a.click();
+    exStatus.textContent="Export selesai";
     exportBtn.disabled=false;
-    console.error(e);
-  }
+  };
+  recorder.start();
+  setTimeout(()=>{recorder.stop();video.pause();},video.duration*1000);
+}else{
+  exStatus.textContent="Upload untuk convert MP4...";
+  const form=new FormData();
+  form.append("video",sourceBlob,"video.webm");
+  const res=await fetch("/api/convert",{method:"POST",body:form});
+  const blob=await res.blob();
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`vidcraft_${Date.now()}.mp4`;
+  a.click();
+  exStatus.textContent="Export selesai (MP4 fallback)";
+  exportBtn.disabled=false;
+}
+}catch(e){
+  exStatus.textContent="Export gagal";
+  exportBtn.disabled=false;
+  console.error(e);
+}
 };
 </script>
 </body>
