@@ -2,112 +2,169 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VidCraft Pro – Batch Mode</title>
+<title>VidCraft Pro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
 
 <style>
-body{
-  background:#020617;
-  font-family:system-ui;
-  color:#e5e7eb;
-  display:flex;
-  justify-content:center;
-  padding:20px;
-}
-.app{
-  width:100%;
-  max-width:430px;
-  background:#0f172a;
-  border-radius:20px;
-  padding:20px;
-  box-shadow:0 0 40px #000;
-}
-label{font-size:13px;color:#94a3b8}
-input,select{
-  width:100%;
-  background:#020617;
-  border:1px solid #1e293b;
-  padding:12px;
-  border-radius:12px;
-  color:white;
-  margin-top:6px;
-}
-button{
-  width:100%;
-  background:#22c55e;
-  color:#022c22;
-  border:none;
-  padding:14px;
-  font-size:16px;
-  font-weight:700;
-  border-radius:14px;
-  margin-top:16px;
-}
-.small{font-size:12px;color:#94a3b8}
-.footer{
-  text-align:center;
-  font-size:11px;
-  color:#64748b;
-  margin-top:16px;
-}
+body{margin:0;font-family:Inter,Arial;background:#0f1115;color:#fff}
+.app{max-width:1000px;margin:auto;padding:20px}
+h1{margin-bottom:4px}
+.card{background:#161a22;border-radius:14px;padding:18px;margin-top:16px}
+input,button{width:100%;padding:14px;border-radius:10px;border:none;margin-top:10px}
+input{background:#0f1115;color:#fff;border:1px solid #2a2f3a}
+button{background:linear-gradient(135deg,#6a5cff,#8b7bff);color:#fff;font-weight:600;cursor:pointer}
+button:disabled{opacity:.6}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.preview{background:#0f1115;border-radius:12px;padding:10px}
+.preview video{width:100%;border-radius:10px}
+.preview small{opacity:.7}
+.preview a{display:block;text-align:center;margin-top:8px;
+background:#22283a;padding:8px;border-radius:8px;color:#fff;text-decoration:none}
+.progress{height:10px;background:#2a2f3a;border-radius:10px;overflow:hidden;margin-top:12px}
+.bar{height:100%;width:0%;background:linear-gradient(90deg,#6a5cff,#8b7bff)}
+.log{font-size:13px;opacity:.8;margin-top:8px}
+hr{border:none;border-top:1px solid #2a2f3a;margin:22px 0}
 </style>
 </head>
 
 <body>
 <div class="app">
+<h1>🎬 VidCraft Pro</h1>
+<p>Download TikTok → langsung jadi video original</p>
 
-<div style="display:flex;gap:12px;align-items:center">
-  <div style="width:36px;height:36px;border-radius:12px;
-    background:linear-gradient(135deg,#22c55e,#16a34a);
-    display:flex;align-items:center;justify-content:center;
-    font-weight:900;color:#022c22">V</div>
-  <div>
-    <div style="font-weight:800">VidCraft Pro</div>
-    <div class="small">Batch Video Generator</div>
-  </div>
+<!-- TIKTOK -->
+<div class="card">
+<h3>⬇️ TikTok Downloader (HD No WM)</h3>
+<input id="ttUrl" placeholder="Paste link TikTok">
+<button onclick="downloadTikTok()">Download & Add to Project</button>
+<div class="log" id="ttLog">Idle</div>
+<div class="grid" id="ttPreview"></div>
 </div>
 
-<p class="small" style="margin:12px 0">
-Upload banyak video → jadi konten original otomatis
-</p>
+<hr>
 
-<label>Upload Banyak Video</label>
-<input type="file" id="videoInput" accept="video/mp4" multiple>
-<div class="small">Tip: 3–10 video sekali jalan paling stabil</div>
+<!-- PROCESSOR -->
+<div class="card">
+<h3>🎞️ Video Processor</h3>
+<input id="hook" placeholder="Hook 3 detik (opsional)">
+<button id="generate">Generate Video</button>
 
-<label>Nama Produk</label>
-<input type="text" id="product" placeholder="Contoh: Motor Listrik">
-
-<label>Voice</label>
-<select id="voiceType">
-  <option value="female">Wanita (Soft)</option>
-  <option value="male">Pria (Tegas)</option>
-</select>
-
-<label>Watermark</label>
-<input type="text" id="brand" placeholder="VidCraft Pro">
-<label><input type="checkbox" id="wmOn" checked> Aktifkan Watermark</label>
-
-<button onclick="generateBatch()">GENERATE SEMUA VIDEO</button>
-
-<div id="progressBox" style="display:none;margin-top:16px">
-  <div class="small">
-    Video <span id="currentVideo">0</span>/<span id="totalVideo">0</span>
-    • <span id="progressText">0%</span>
-  </div>
-  <div style="width:100%;height:10px;background:#020617;border-radius:999px;overflow:hidden;margin-top:6px">
-    <div id="progressBar"
-      style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#16a34a)">
-    </div>
-  </div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="log" id="log">Idle</div>
 </div>
 
-<div class="footer">
-© 2026 VidCraft Pro • Batch Mode
+<div class="grid" id="result"></div>
 </div>
 
+<script>
+/* ================= TIKTOK PIPE ================= */
+let projectVideos=[]
+
+async function downloadTikTok(){
+  const url=document.getElementById("ttUrl").value
+  const log=document.getElementById("ttLog")
+  const preview=document.getElementById("ttPreview")
+
+  if(!url.includes("tiktok")){
+    alert("Link TikTok tidak valid"); return
+  }
+
+  log.innerText="Fetching video..."
+  preview.innerHTML=""
+
+  try{
+    const res=await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`)
+    const data=await res.json()
+    if(!data.data){log.innerText="Gagal";return}
+
+    const src=data.data.hdplay || data.data.play
+    const blob=await fetch(src).then(r=>r.blob())
+    projectVideos.push(blob)
+
+    const card=document.createElement("div")
+    card.className="preview"
+    card.innerHTML=`
+      <video controls src="${URL.createObjectURL(blob)}"></video>
+      <small>Masuk ke project ✔</small>
+    `
+    preview.appendChild(card)
+
+    log.innerText="Berhasil ditambahkan"
+  }catch{
+    log.innerText="Error download"
+  }
+}
+
+/* ================= VIDCRAFT ================= */
+const { createFFmpeg, fetchFile } = FFmpeg
+const ffmpeg=createFFmpeg({
+  log:true,
+  corePath:"https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js"
+})
+
+const btn=document.getElementById("generate")
+const bar=document.getElementById("bar")
+const log=document.getElementById("log")
+const result=document.getElementById("result")
+
+btn.onclick=async()=>{
+  if(!projectVideos.length){
+    alert("Belum ada video dari TikTok"); return
+  }
+
+  btn.disabled=true
+  bar.style.width="0%"
+  result.innerHTML=""
+  log.innerText="Loading FFmpeg..."
+
+  if(!ffmpeg.isLoaded()) await ffmpeg.load()
+
+  const hook=document.getElementById("hook").value.replace(/'/g,"")
+  let step=100/projectVideos.length,prog=0
+
+  for(let i=0;i<projectVideos.length;i++){
+    log.innerText=`Processing ${i+1}/${projectVideos.length}`
+
+    const input=`in${i}.mp4`
+    const output=`vidcraft_${i}.mp4`
+
+    ffmpeg.FS("writeFile",input,await fetchFile(projectVideos[i]))
+
+    if(hook.trim()){
+      await ffmpeg.run(
+        "-i",input,
+        "-vf",
+        `drawtext=text='${hook}':fontcolor=white:fontsize=42:x=(w-text_w)/2:y=(h-text_h)/2:box=1:boxcolor=black@0.6:boxborderw=10:enable='lt(t,3)'`,
+        "-c:a","copy",
+        output
+      )
+    }else{
+      await ffmpeg.run("-i",input,"-c","copy",output)
+    }
+
+    const data=ffmpeg.FS("readFile",output)
+    const url=URL.createObjectURL(new Blob([data.buffer],{type:"video/mp4"}))
+
+    const card=document.createElement("div")
+    card.className="preview"
+    card.innerHTML=`
+      <video controls src="${url}"></video>
+      <a href="${url}" download="${output}">⬇️ Download</a>
+    `
+    result.appendChild(card)
+
+    prog+=step
+    bar.style.width=prog+"%"
+  }
+
+  log.innerText="Selesai 🎉"
+  btn.disabled=false
+}
+</script>
+</body>
+</html>
 </div>
 
 <script>
