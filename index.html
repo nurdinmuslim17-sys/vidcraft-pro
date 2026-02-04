@@ -71,6 +71,7 @@ video{
 <h1>🎬 VidCraft Pro</h1>
 <p class="status">Download → Hook → Re-export Original</p>
 
+<!-- TikTok Downloader -->
 <div class="card">
   <b>⬇️ TikTok Downloader</b>
   <input id="url" placeholder="Tempel link TikTok">
@@ -78,11 +79,13 @@ video{
   <div id="dlStatus" class="status"></div>
 </div>
 
+<!-- Hook -->
 <div class="card">
   <b>🪝 Hook 3 Detik</b>
   <input id="hookText" placeholder="Contoh: Motor ini bikin kaget!">
 </div>
 
+<!-- Preview + Export -->
 <div class="card">
   <b>🎞️ Preview</b>
   <div class="video-wrap">
@@ -106,21 +109,37 @@ const exStatus = document.getElementById("exStatus");
 
 let sourceBlob;
 
+// Downloader TikTok
 downloadBtn.onclick = async () => {
+  const url = urlInput.value.trim();
+  if(!url) return;
   dlStatus.textContent = "Mengambil video...";
+  dlStatus.className = "status";
+
   try{
-    const r = await fetch(`/api/tiktok?url=${encodeURIComponent(urlInput.value)}`);
-    const j = await r.json();
-    const v = await fetch(j.data.play);
-    sourceBlob = await v.blob();
+    const res = await fetch(`/api/tiktok?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+
+    if(!data.data || !data.data.play){
+      throw new Error("Video tidak ditemukan");
+    }
+
+    const vRes = await fetch(data.data.play);
+    sourceBlob = await vRes.blob();
+
     video.src = URL.createObjectURL(sourceBlob);
-    exportBtn.disabled = false;
+    video.onloadedmetadata = () => {
+      exportBtn.disabled = false;
+    }
+
     dlStatus.textContent = "Video siap";
-  }catch{
+  }catch(e){
     dlStatus.textContent = "Gagal download";
+    dlStatus.className = "status error";
   }
 };
 
+// Hook overlay
 video.ontimeupdate = () => {
   if(video.currentTime <= 3 && hookInput.value.trim()){
     hook.style.display = "block";
@@ -130,33 +149,45 @@ video.ontimeupdate = () => {
   }
 };
 
+// Export video
 exportBtn.onclick = async () => {
+  if(!video.src){
+    alert("Video belum ada");
+    return;
+  }
+
   exStatus.textContent = "Re-export + subtitle...";
   exportBtn.disabled = true;
 
-  const stream = document.querySelector(".video-wrap").captureStream();
-  const recorder = new MediaRecorder(stream,{mimeType:"video/webm"});
-  let chunks=[];
+  try{
+    video.currentTime = 0;
+    await video.play(); // pastikan play dulu
+    const stream = document.querySelector(".video-wrap").captureStream();
+    const recorder = new MediaRecorder(stream, {mimeType:"video/webm"});
+    let chunks=[];
 
-  recorder.ondataavailable=e=>chunks.push(e.data);
-  recorder.onstop=()=>{
-    const blob=new Blob(chunks,{type:"video/webm"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download=`vidcraft_${Date.now()}.webm`;
-    a.click();
-    exStatus.textContent="Export selesai";
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.onstop = () => {
+      const blob = new Blob(chunks,{type:"video/webm"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `vidcraft_${Date.now()}.webm`;
+      a.click();
+      exStatus.textContent="Export selesai";
+      exportBtn.disabled=false;
+    };
+
+    recorder.start();
+    setTimeout(()=>{
+      recorder.stop();
+      video.pause();
+    }, video.duration*1000);
+
+  }catch(e){
+    exStatus.textContent = "Export gagal";
     exportBtn.disabled=false;
-  };
-
-  video.currentTime=0;
-  video.play();
-  recorder.start();
-
-  setTimeout(()=>{
-    recorder.stop();
-    video.pause();
-  }, video.duration*1000);
+    console.error(e);
+  }
 };
 </script>
 </body>
