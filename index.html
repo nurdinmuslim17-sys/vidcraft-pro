@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VidCraft Pro</title>
+<title>VidCraft Pro – Batch Mode</title>
 
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
 
@@ -18,7 +18,7 @@ body{
 }
 .app{
   width:100%;
-  max-width:420px;
+  max-width:430px;
   background:#0f172a;
   border-radius:20px;
   padding:20px;
@@ -45,6 +45,7 @@ button{
   border-radius:14px;
   margin-top:16px;
 }
+.small{font-size:12px;color:#94a3b8}
 .footer{
   text-align:center;
   font-size:11px;
@@ -57,7 +58,6 @@ button{
 <body>
 <div class="app">
 
-<!-- HEADER -->
 <div style="display:flex;gap:12px;align-items:center">
   <div style="width:36px;height:36px;border-radius:12px;
     background:linear-gradient(135deg,#22c55e,#16a34a);
@@ -65,49 +65,39 @@ button{
     font-weight:900;color:#022c22">V</div>
   <div>
     <div style="font-weight:800">VidCraft Pro</div>
-    <div style="font-size:11px;color:#94a3b8">Original Video Generator</div>
+    <div class="small">Batch Video Generator</div>
   </div>
 </div>
 
-<p style="font-size:13px;color:#94a3b8;margin:12px 0">
-Turn downloaded videos into original content
+<p class="small" style="margin:12px 0">
+Upload banyak video → jadi konten original otomatis
 </p>
 
-<!-- INPUT -->
-<label>Upload Video</label>
-<input type="file" id="videoInput" accept="video/mp4">
+<label>Upload Banyak Video</label>
+<input type="file" id="videoInput" accept="video/mp4" multiple>
+<div class="small">Tip: 3–10 video sekali jalan paling stabil</div>
 
 <label>Nama Produk</label>
 <input type="text" id="product" placeholder="Contoh: Motor Listrik">
 
-<label>Voice Storytelling</label>
+<label>Voice</label>
 <select id="voiceType">
   <option value="female">Wanita (Soft)</option>
   <option value="male">Pria (Tegas)</option>
 </select>
 
-<label>Watermark Brand</label>
+<label>Watermark</label>
 <input type="text" id="brand" placeholder="VidCraft Pro">
+<label><input type="checkbox" id="wmOn" checked> Aktifkan Watermark</label>
 
-<label>
-  <input type="checkbox" id="wmOn" checked> Aktifkan Watermark
-</label>
+<button onclick="generateBatch()">GENERATE SEMUA VIDEO</button>
 
-<label>Preset Musik</label>
-<select id="musicPreset">
-  <option value="lofi">Lofi (Santai)</option>
-  <option value="cinematic">Cinematic (Dramatis)</option>
-  <option value="upbeat">Upbeat (Promosi)</option>
-</select>
-
-<button onclick="generate()">GENERATE VIDEO</button>
-
-<!-- PROGRESS -->
 <div id="progressBox" style="display:none;margin-top:16px">
-  <div style="font-size:12px;color:#94a3b8;margin-bottom:6px">
-    Processing <span id="progressText">0%</span>
+  <div class="small">
+    Video <span id="currentVideo">0</span>/<span id="totalVideo">0</span>
+    • <span id="progressText">0%</span>
   </div>
-  <div style="width:100%;height:10px;background:#020617;border-radius:999px;overflow:hidden">
+  <div style="width:100%;height:10px;background:#020617;border-radius:999px;overflow:hidden;margin-top:6px">
     <div id="progressBar"
       style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#16a34a)">
     </div>
@@ -115,7 +105,7 @@ Turn downloaded videos into original content
 </div>
 
 <div class="footer">
-© 2026 VidCraft Pro • Affiliate Video Tool
+© 2026 VidCraft Pro • Batch Mode
 </div>
 
 </div>
@@ -124,27 +114,33 @@ Turn downloaded videos into original content
 const { createFFmpeg, fetchFile } = FFmpeg
 const ffmpeg = createFFmpeg({ log:false })
 
-const musicConfig={
-  lofi:{file:'musik-lofi.mp3',volume:0.18},
-  cinematic:{file:'musik-cinematic.mp3',volume:0.22},
-  upbeat:{file:'musik-upbeat.mp3',volume:0.3}
-}
-
 function setProgress(p){
   progressBox.style.display="block"
   progressBar.style.width=p+"%"
   progressText.innerText=p+"%"
 }
 
-function randomStory(product){
-  return `Ini bukan ${product} biasa.
+function buildStory(product){
+  const hooks=[
+    "Banyak orang nyesel setelah beli ini.",
+    "Produk ini lagi viral dan alasannya masuk akal.",
+    "Masalah ini sering terjadi kalau salah pilih produk.",
+    "Aku juga kaget pas lihat hasilnya."
+  ]
+  const hook=hooks[Math.floor(Math.random()*hooks.length)]
+  const story=`Ini bukan ${product} biasa.
 Pilihan tepat untuk kamu yang ingin kualitas dan kenyamanan terbaik.`
+  return {hook,story}
 }
 
-function generateSRT(text){
+function generateSRT(hook,story){
   return `1
-00:00:00,000 --> 00:00:05,000
-${text}`
+00:00:00,000 --> 00:00:03,000
+${hook}
+
+2
+00:00:03,000 --> 00:00:09,000
+${story}`
 }
 
 async function generateTTS(text,gender){
@@ -153,9 +149,7 @@ async function generateTTS(text,gender){
     const rec=new MediaRecorder(stream)
     let chunks=[]
     rec.ondataavailable=e=>chunks.push(e.data)
-    rec.onstop=()=>{
-      resolve(new Blob(chunks,{type:'audio/webm'}))
-    }
+    rec.onstop=()=>resolve(new Blob(chunks,{type:'audio/webm'}))
     rec.start()
 
     let voices=speechSynthesis.getVoices()
@@ -178,53 +172,46 @@ async function generateTTS(text,gender){
   })
 }
 
-async function generate(){
-  try{
-    setProgress(1)
+async function generateBatch(){
+  const files=[...videoInput.files]
+  const productName=product.value
+  if(!files.length||!productName) return alert("Lengkapi data")
 
-    const file=videoInput.files[0]
-    const product=product.value
-    if(!file||!product) return alert("Lengkapi data")
+  totalVideo.innerText=files.length
 
-    const brandText=brand.value||"VidCraft Pro"
-    const wm=wmOn.checked
-    const voice=voiceType.value
-    const preset=musicPreset.value
-    const music=musicConfig[preset]
+  if(!ffmpeg.isLoaded()){
+    setProgress(5)
+    await ffmpeg.load()
+  }
 
-    if(!ffmpeg.isLoaded()){
-      setProgress(10)
-      await ffmpeg.load()
-    }
+  for(let i=0;i<files.length;i++){
+    currentVideo.innerText=i+1
+    setProgress(10)
 
-    setProgress(25)
+    const {hook,story}=buildStory(productName)
+    const fullText=hook+" "+story
+    const tts=await generateTTS(fullText,voiceType.value)
 
-    const story=randomStory(product)
-    const tts=await generateTTS(story,voice)
-
-    ffmpeg.FS('writeFile','input.mp4',await fetchFile(file))
+    ffmpeg.FS('writeFile','input.mp4',await fetchFile(files[i]))
     ffmpeg.FS('writeFile','voice.webm',await fetchFile(tts))
-    ffmpeg.FS('writeFile','subs.srt',new TextEncoder().encode(generateSRT(story)))
-    ffmpeg.FS('writeFile',music.file,await fetchFile(music.file))
+    ffmpeg.FS('writeFile','subs.srt',
+      new TextEncoder().encode(generateSRT(hook,story))
+    )
 
-    setProgress(55)
+    setProgress(60)
 
-    const wmFilter=wm
-      ? `drawtext=text='${brandText}':fontcolor=white@0.18:fontsize=36:x=w-tw-20:y=20`
+    const wmFilter=wmOn.checked
+      ? `drawtext=text='${brand.value||"VidCraft Pro"}':
+         fontcolor=white@0.18:fontsize=36:x=w-tw-20:y=20`
       : `null`
 
     await ffmpeg.run(
       '-i','input.mp4',
       '-i','voice.webm',
-      '-i',music.file,
       '-filter_complex',
-      `
-      [2:a]volume=${music.volume}[bg];
-      [1:a][bg]amix=inputs=2:dropout_transition=2[audio];
-      [0:v]scale=1080:1920,zoompan=z=1.05,${wmFilter},subtitles=subs.srt[v]
-      `,
+      `[0:v]scale=1080:1920,zoompan=z=1.05,${wmFilter},subtitles=subs.srt[v]`,
       '-map','[v]',
-      '-map','[audio]',
+      '-map','1:a',
       '-shortest',
       'out.mp4'
     )
@@ -235,13 +222,11 @@ async function generate(){
     const url=URL.createObjectURL(new Blob([data.buffer],{type:'video/mp4'}))
     const a=document.createElement("a")
     a.href=url
-    a.download="vidcraft-original.mp4"
+    a.download=`vidcraft_${i+1}.mp4`
     a.click()
 
     setProgress(100)
-
-  }catch(e){
-    alert("Error: "+e.message)
+    await new Promise(r=>setTimeout(r,800))
   }
 }
 </script>
