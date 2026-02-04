@@ -2,112 +2,165 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VidCraft Pro</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
 
 <style>
-body{margin:0;font-family:Inter,Arial;background:#0f1115;color:#fff}
-.app{max-width:1000px;margin:auto;padding:20px}
-h1{margin-bottom:4px}
-.card{background:#161a22;border-radius:14px;padding:18px;margin-top:16px}
-input,button{width:100%;padding:14px;border-radius:10px;border:none;margin-top:10px}
-input{background:#0f1115;color:#fff;border:1px solid #2a2f3a}
-button{background:linear-gradient(135deg,#6a5cff,#8b7bff);color:#fff;font-weight:600;cursor:pointer}
+body{
+  margin:0;
+  background:#0b0f17;
+  color:#eaeaf0;
+  font-family:system-ui;
+  display:flex;
+  justify-content:center;
+  padding:20px
+}
+.app{max-width:420px;width:100%}
+.card{
+  background:#141a26;
+  padding:18px;
+  border-radius:16px;
+  margin-bottom:16px
+}
+h1{margin:0 0 8px}
+input,button{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  margin-top:10px;
+  font-size:14px
+}
+input{background:#0b1020;color:white}
+button{
+  background:#6d5cff;
+  color:white;
+  font-weight:700;
+  cursor:pointer
+}
 button:disabled{opacity:.6}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
-.preview{background:#0f1115;border-radius:12px;padding:10px}
-.preview video{width:100%;border-radius:10px}
-.preview small{opacity:.7}
-.preview a{display:block;text-align:center;margin-top:8px;
-background:#22283a;padding:8px;border-radius:8px;color:#fff;text-decoration:none}
-.progress{height:10px;background:#2a2f3a;border-radius:10px;overflow:hidden;margin-top:12px}
-.bar{height:100%;width:0%;background:linear-gradient(90deg,#6a5cff,#8b7bff)}
-.log{font-size:13px;opacity:.8;margin-top:8px}
-hr{border:none;border-top:1px solid #2a2f3a;margin:22px 0}
+.status{font-size:13px;color:#9aa3b2;margin-top:8px}
+
+.video-wrap{
+  position:relative;
+  margin-top:12px
+}
+video{
+  width:100%;
+  border-radius:12px
+}
+.hook{
+  position:absolute;
+  top:8%;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,.6);
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:800;
+  text-align:center;
+  max-width:90%;
+  display:none;
+  font-size:18px
+}
 </style>
 </head>
 
 <body>
 <div class="app">
 <h1>🎬 VidCraft Pro</h1>
-<p>Download TikTok → langsung jadi video original</p>
+<p class="status">Download → Hook → Re-export Original</p>
 
-<!-- TIKTOK -->
 <div class="card">
-<h3>⬇️ TikTok Downloader (HD No WM)</h3>
-<input id="ttUrl" placeholder="Paste link TikTok">
-<button onclick="downloadTikTok()">Download & Add to Project</button>
-<div class="log" id="ttLog">Idle</div>
-<div class="grid" id="ttPreview"></div>
+  <b>⬇️ TikTok Downloader</b>
+  <input id="url" placeholder="Tempel link TikTok">
+  <button id="download">Download</button>
+  <div id="dlStatus" class="status"></div>
 </div>
 
-<hr>
-
-<!-- PROCESSOR -->
 <div class="card">
-<h3>🎞️ Video Processor</h3>
-<input id="hook" placeholder="Hook 3 detik (opsional)">
-<button id="generate">Generate Video</button>
-
-<div class="progress"><div class="bar" id="bar"></div></div>
-<div class="log" id="log">Idle</div>
+  <b>🪝 Hook 3 Detik</b>
+  <input id="hookText" placeholder="Contoh: Motor ini bikin kaget!">
 </div>
 
-<div class="grid" id="result"></div>
+<div class="card">
+  <b>🎞️ Preview</b>
+  <div class="video-wrap">
+    <video id="video" controls></video>
+    <div id="hook" class="hook"></div>
+  </div>
+  <button id="export" disabled>Export Video (Original)</button>
+  <div id="exStatus" class="status">Idle</div>
+</div>
 </div>
 
 <script>
-/* ================= TIKTOK PIPE ================= */
-let projectVideos=[]
+const urlInput = document.getElementById("url");
+const hookInput = document.getElementById("hookText");
+const downloadBtn = document.getElementById("download");
+const exportBtn = document.getElementById("export");
+const video = document.getElementById("video");
+const hook = document.getElementById("hook");
+const dlStatus = document.getElementById("dlStatus");
+const exStatus = document.getElementById("exStatus");
 
-async function downloadTikTok(){
-  const url=document.getElementById("ttUrl").value
-  const log=document.getElementById("ttLog")
-  const preview=document.getElementById("ttPreview")
+let sourceBlob;
 
-  if(!url.includes("tiktok")){
-    alert("Link TikTok tidak valid"); return
-  }
-
-  log.innerText="Fetching video..."
-  preview.innerHTML=""
-
+downloadBtn.onclick = async () => {
+  dlStatus.textContent = "Mengambil video...";
   try{
-    const res=await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`)
-    const data=await res.json()
-    if(!data.data){log.innerText="Gagal";return}
-
-    const src=data.data.hdplay || data.data.play
-    const blob=await fetch(src).then(r=>r.blob())
-    projectVideos.push(blob)
-
-    const card=document.createElement("div")
-    card.className="preview"
-    card.innerHTML=`
-      <video controls src="${URL.createObjectURL(blob)}"></video>
-      <small>Masuk ke project ✔</small>
-    `
-    preview.appendChild(card)
-
-    log.innerText="Berhasil ditambahkan"
+    const r = await fetch(`/api/tiktok?url=${encodeURIComponent(urlInput.value)}`);
+    const j = await r.json();
+    const v = await fetch(j.data.play);
+    sourceBlob = await v.blob();
+    video.src = URL.createObjectURL(sourceBlob);
+    exportBtn.disabled = false;
+    dlStatus.textContent = "Video siap";
   }catch{
-    log.innerText="Error download"
+    dlStatus.textContent = "Gagal download";
   }
-}
+};
 
-/* ================= VIDCRAFT ================= */
-const { createFFmpeg, fetchFile } = FFmpeg
-const ffmpeg=createFFmpeg({
-  log:true,
-  corePath:"https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js"
-})
+video.ontimeupdate = () => {
+  if(video.currentTime <= 3 && hookInput.value.trim()){
+    hook.style.display = "block";
+    hook.textContent = hookInput.value;
+  }else{
+    hook.style.display = "none";
+  }
+};
 
-const btn=document.getElementById("generate")
-const bar=document.getElementById("bar")
-const log=document.getElementById("log")
-const result=document.getElementById("result")
+exportBtn.onclick = async () => {
+  exStatus.textContent = "Re-export + subtitle...";
+  exportBtn.disabled = true;
+
+  const stream = document.querySelector(".video-wrap").captureStream();
+  const recorder = new MediaRecorder(stream,{mimeType:"video/webm"});
+  let chunks=[];
+
+  recorder.ondataavailable=e=>chunks.push(e.data);
+  recorder.onstop=()=>{
+    const blob=new Blob(chunks,{type:"video/webm"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=`vidcraft_${Date.now()}.webm`;
+    a.click();
+    exStatus.textContent="Export selesai";
+    exportBtn.disabled=false;
+  };
+
+  video.currentTime=0;
+  video.play();
+  recorder.start();
+
+  setTimeout(()=>{
+    recorder.stop();
+    video.pause();
+  }, video.duration*1000);
+};
+</script>
+</body>
+</html>const result=document.getElementById("result")
 
 btn.onclick=async()=>{
   if(!projectVideos.length){
